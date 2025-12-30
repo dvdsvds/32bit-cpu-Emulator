@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(CPU LANGUAGES CXX)
 
-file(GLOB_RECURSE SRC_FILES
+add_executable(cpu
     src/decoder.cpp
     src/memory.cpp
     src/cpu.cpp
@@ -12,9 +12,9 @@ file(GLOB_RECURSE SRC_FILES
     test/test_cpu.cpp
 )
 
-add_executable(cpu ${SRC_FILES})
-
-target_include_directories(cpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(cpu PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
 set_target_properties(cpu PROPERTIES 
     CXX_STANDARD 20
