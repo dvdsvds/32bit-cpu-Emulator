@@ -9,7 +9,8 @@ add_executable(cpu
     src/encoder.cpp
     src/pipeline.cpp
     src/predictor.cpp
-    test/test_cpu.cpp
+    src/assembler.cpp
+    # test/test_cpu.cpp
 )
 
 target_include_directories(cpu PRIVATE 
