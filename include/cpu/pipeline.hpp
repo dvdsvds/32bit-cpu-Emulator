@@ -57,6 +57,7 @@ struct EX_WB {
     bool mem_u8;
     bool is_branch;
     bool branch_taken;
+    bool flags_write;
     
     Flags f;
     bool is_valid;

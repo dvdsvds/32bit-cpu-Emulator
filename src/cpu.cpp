@@ -93,7 +93,7 @@ void CPU::wb_stage() {
             } 
         }
 
-        if(exwb.opcode != Opcode::IRET) {
+        if(exwb.flags_write) {
             f = exwb.f;
         }
     }
@@ -109,6 +109,7 @@ void CPU::ex_stage() {
     } 
 
     next.branch_taken = false;
+    next.flags_write = false;
     u32 result;
     next.opcode = idex.opcode;
     next.reg_write = idex.reg_write;
@@ -141,6 +142,7 @@ void CPU::ex_stage() {
                 next.f = update_flags_add(result, rd_val, idex.imm19);
             }
             next.is_valid = true;
+            next.flags_write = true;
             break;
         }
         case Opcode::SUB: {
@@ -154,14 +156,12 @@ void CPU::ex_stage() {
             } else {
                 u32 rd_val = get_forwarded_value(idex.n_rd, idex.curr_v_rd);
                 result = rd_val - idex.imm19;
-                        std::cout << "[SUB_I] R" << (int)idex.n_rd 
-                  << "(" << rd_val << ") - " << idex.imm19 
-                  << " = " << result << std::endl;
                 next.alu_result = result;
                 next.n_rd = idex.n_rd;
                 next.f = update_flags_sub(result, rd_val, idex.imm19);
             }
             next.is_valid = true;
+            next.flags_write = true;
             break;
         }
         case Opcode::AND: {
@@ -180,6 +180,7 @@ void CPU::ex_stage() {
                 next.f = update_flags_logic(result);
             }
             next.is_valid = true;
+            next.flags_write = true;
             break;
         }
         case Opcode::OR: {
@@ -198,6 +199,7 @@ void CPU::ex_stage() {
                 next.f = update_flags_logic(result);
             }
             next.is_valid = true;
+            next.flags_write = true;
             break;
         }
         case Opcode::XOR: {
@@ -216,6 +218,7 @@ void CPU::ex_stage() {
                 next.f = update_flags_logic(result);
             }
             next.is_valid = true;
+            next.flags_write = true;
             break;
         }
         case Opcode::SHL: {
@@ -234,6 +237,7 @@ void CPU::ex_stage() {
                 next.f = update_flags_shift(result);
             }
             next.is_valid = true;
+            next.flags_write = true;
             break;
         }
         case Opcode::SHR: {
@@ -252,6 +256,7 @@ void CPU::ex_stage() {
                 next.f = update_flags_shift(result);
             }
             next.is_valid = true;
+            next.flags_write = true;
             break;
         }
         case Opcode::SAR: {
@@ -270,6 +275,7 @@ void CPU::ex_stage() {
                 next.f = update_flags_shift(result);
             }
             next.is_valid = true;
+            next.flags_write = true;
             break;
         }
         case Opcode::MUL: {
@@ -288,6 +294,7 @@ void CPU::ex_stage() {
                 next.f = update_flags_logic(result);
             }
             next.is_valid = true;
+            next.flags_write = true;
             break;
         }
         case Opcode::DIV: {
@@ -314,6 +321,7 @@ void CPU::ex_stage() {
                 next.f = update_flags_logic(result);
             }
             next.is_valid = true;
+            next.flags_write = true;
             break;
         }
         case Opcode::CMP: {
@@ -327,6 +335,7 @@ void CPU::ex_stage() {
                 next.f = update_flags_sub(result, rs1_val, idex.imm19);
             }
             next.is_valid = true;
+            next.flags_write = true;
             break;
         }
         case Opcode::MOV: {
@@ -405,8 +414,8 @@ void CPU::ex_stage() {
         }
         case Opcode::BJMP: {
             Flags current_flags = f;
-            if(exwb.is_valid && exwb.opcode != Opcode::IRET) {
-                current_flags = exwb.f; 
+            if(exwb.is_valid && exwb.flags_write) {
+                current_flags = exwb.f;
             }
             
             bool take = false;
@@ -446,17 +455,17 @@ void CPU::ex_stage() {
         }
         case Opcode::CALL: {
             addr_t return_addr = idex.curr_pc + 4;
-            
+
             u32 old_sp = csr[static_cast<u8>(Csr::SP)];
             u32 new_sp = old_sp - 4;
 
             mem.write_u32(new_sp, return_addr);
             csr[static_cast<u8>(Csr::SP)] = new_sp;
-            
+
             int32_t offset = sign_extend_26bit(idex.addr26);
             addr_t target = idex.curr_pc + offset;
             pc = target;
-            
+
             need_flush_ifid = true;
             need_flush_idex = true;
             next.is_valid = true;
@@ -466,9 +475,8 @@ void CPU::ex_stage() {
             u32 old_sp = csr[static_cast<u8>(Csr::SP)];
             addr_t return_addr = mem.read_u32(old_sp);
             u32 new_sp = old_sp + 4;
-
             csr[static_cast<u8>(Csr::SP)] = new_sp;
-            
+
             pc = return_addr;
             need_flush_ifid = true;
             need_flush_idex = true;
@@ -759,9 +767,6 @@ void CPU::run() {
     paused = false;
     while(!is_halted() && !is_paused()) {
         step();
-         if(is_halted()) {
-            break;
-        }
     }
 }
 u32 CPU::get_register(reg_index idx) const {

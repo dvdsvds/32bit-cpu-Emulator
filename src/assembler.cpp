@@ -36,10 +36,11 @@ private:
 
     int parseRegister(const std::string& reg) {
         if(reg[0] == 'r') {
-            if(reg == "r_temp") return 31; // 임시 레지스터
+            if(reg == "r_temp") return 31;
             return std::stoi(reg.substr(1));
         }
-        return 0;
+        std::cerr << "Invalid register: " << reg << std::endl;
+        return -1;
     }
 
     int parseImmediate(const std::string& imm) {
@@ -66,7 +67,6 @@ private:
             
             if(trimmed.empty()) continue;
             
-            // 레이블 체크
             if(trimmed.back() == ':') {
                 std::string label = trimmed.substr(0, trimmed.length() - 1);
                 labels[label] = current_address;
@@ -101,18 +101,58 @@ private:
         }
     }
 
+    int parseCSR(const std::string& name) {
+        if(name == "EPC") return 0;
+        if(name == "CAUSE") return 1;
+        if(name == "STATUS") return 2;
+        if(name == "IVTBR") return 3;
+        if(name == "IMASK") return 4;
+        if(name == "IPENDING") return 5;
+        if(name == "SEPC") return 6;
+        if(name == "SSTATUS") return 7;
+        if(name == "SCRATCH") return 8;
+        if(name == "CYCLE") return 9;
+        if(name == "TPERIOD") return 10;
+        if(name == "TCONTROL") return 11;
+        if(name == "TCOUNTER") return 12;
+        if(name == "EFLAGS") return 13;
+        if(name == "SP") return 14;
+        return -1;
+    }
+
+    bool isImm(const std::string& arg) {
+        if(arg.empty()) return false;
+        return std::isdigit(arg[0]) || 
+               (arg[0] == '0' && arg.size() > 1 && arg[1] == 'x') || 
+               (arg[0] == '-' && arg.size() > 1 && std::isdigit(arg[1])); 
+    }
+
     inst_t parseInstruction(const std::string& line) {
-        auto tokens = split(line, ' ');
-        if(tokens.empty()) return 0;
-        
-        std::string opcode = tokens[0];
+        size_t space = line.find(' ');
+        if(space == std::string::npos) {
+            std::string opcode = line;
+            if(opcode == "ret") { return RET(); }
+            if(opcode == "hlt") { return HLT(); }
+            if(opcode == "nop") { return NOP(); }
+            return NOP();
+        }
+
+        std::string opcode = line.substr(0, space);
+        std::string rest = line.substr(space + 1);
+
+        size_t start = rest.find_first_not_of(" \t");
+        size_t end = rest.find_last_not_of(" \t");
+        if(start != std::string::npos) {
+            rest = rest.substr(start, end - start + 1);
+        }
+
+        auto args = split(rest, ',');
         
         // ADD, SUB, MUL, DIV, MOD, AND, OR, XOR, SHL, SHR
         if(opcode == "add" || opcode == "sub" || opcode == "mul" || opcode == "div" || 
            opcode == "and" || opcode == "or" || opcode == "xor" ||
            opcode == "shl" || opcode == "shr") {
             
-            auto args = split(tokens[1], ',');
             int rd = parseRegister(args[0]);
             int rs1 = parseRegister(args[1]);
             int rs2 = parseRegister(args[2]);
@@ -130,7 +170,6 @@ private:
         
         // CMP
         if(opcode == "cmp") {
-            auto args = split(tokens[1], ',');
             int rs1 = parseRegister(args[0]);
             int rs2 = parseRegister(args[1]);
             return CMP(rs1, rs2, Mode::REGISTER);
@@ -138,7 +177,6 @@ private:
         
         // MOV
         if(opcode == "mov") {
-            auto args = split(tokens[1], ',');
             int rd = parseRegister(args[0]);
             
             if(args[1][0] == 'r') {
@@ -152,14 +190,13 @@ private:
         
         // JMP
         if(opcode == "jmp") {
-            std::string target = tokens[1];
-            int offset = labels[target] - (current_address + 4);
+            std::string target = args[0];
+            int offset = labels[target] - current_address;
             return JMP(offset);
         }
         
         // BJMP
         if(opcode == "bjmp") {
-            auto args = split(tokens[1], ',');
             std::string cond_str = args[0];
             std::string target = args[1];
             
@@ -171,28 +208,19 @@ private:
             else if(cond_str == "GT") cond = Cond::GT;
             else if(cond_str == "GE") cond = Cond::GE;
             
-            int offset = labels[target] - (current_address + 4);
+            int offset = labels[target] - current_address;
             return BJMP(cond, offset);
         }
         
-        // CALL
         if(opcode == "call") {
-            std::string target = tokens[1];
-            int offset = labels[target] - (current_address + 4);
+            std::string target = args[0];
+            int offset = labels[target] - current_address;
             return CALL(offset);
-        }
-        
-        // RET
-        if(opcode == "ret") {
-            return RET();
         }
         
         // LOADW, STOREW
         if(opcode == "loadw" || opcode == "storew") {
-            auto args = split(tokens[1], ',');
             int rd = parseRegister(args[0]);
-            
-            // offset(rs1) 파싱
             std::string addr = args[1];
             size_t paren = addr.find('(');
             int offset = parseImmediate(addr.substr(0, paren));
@@ -204,28 +232,31 @@ private:
         
         // CSRR, CSRW
         if(opcode == "csrr") {
-            auto args = split(tokens[1], ',');
             int rd = parseRegister(args[0]);
-            // CSR 이름 파싱 필요 (SP 등)
-            return CSRR(rd, 0, Mode::REGISTER); // TODO: CSR 번호 매핑
+            int csr = parseCSR(args[1]);
+            return CSRR(rd, csr, Mode::REGISTER); 
         }
         
         if(opcode == "csrw") {
-            auto args = split(tokens[1], ',');
+            int csr = parseCSR(args[0]);
+            if(isImm(args[1])) {
+                int imm = parseImmediate(args[1]);
+                return CSRW(imm, csr, Mode::IMMEDIATE);
+            } else {
+                int rs = parseRegister(args[1]);
+                return CSRW(rs, csr, Mode::REGISTER);
+            }
+        }
+        
+        if(opcode == "push") {
             int rs = parseRegister(args[0]);
-            return CSRW(rs, 0, Mode::REGISTER); // TODO: CSR 번호 매핑
+            return PUSH(rs);
         }
-        
-        // HLT
-        if(opcode == "hlt") {
-            return HLT();
+
+        if(opcode == "pop") {
+            int rs = parseRegister(args[0]);
+            return POP(rs);
         }
-        
-        // NOP
-        if(opcode == "nop") {
-            return NOP();
-        }
-        
         return NOP();
     }
 
@@ -251,6 +282,10 @@ public:
         secondPass(lines);
         
         return instructions;
+    }
+
+    void error(int line, const std::string& msg) {
+        std::cerr << "Error (line " << line << "):" << msg << std::endl;
     }
 };
 
