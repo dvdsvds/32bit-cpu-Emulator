@@ -20,10 +20,13 @@ namespace dump {
 
     void dump_registers(const CPU& cpu) {
         for(int i = 0; i < REGISTER_COUNT; i++) {
+            u32 val = cpu.get_register(i);
+            if(val == 0) continue;
+
             if(i < 10) {
-                std::cout << "R0" << std::dec << i << " = 0x" << std::hex << std::setw(8) << std::setfill('0') << cpu.get_register(i) << " > " << std::dec << cpu.get_register(i) << std::endl;
+                std::cout << "R0" << std::dec << i << " = 0x" << std::hex << std::setw(8) << std::setfill('0') << val << " > " << std::dec << val << std::endl;
             } else {
-                std::cout << "R" << std::dec << i << " = 0x" << std::hex << std::setw(8) << std::setfill('0') << cpu.get_register(i) << " > " << std::dec << cpu.get_register(i)<< std::endl;
+                std::cout << "R" << std::dec << i << " = 0x" << std::hex << std::setw(8) << std::setfill('0') << val << " > " << std::dec << val << std::endl;
             }
         }
     }
