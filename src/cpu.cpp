@@ -493,13 +493,13 @@ void CPU::ex_stage() {
         }
         case Opcode::SYSCALL: {
             csr[static_cast<u8>(Csr::EPC)] = idex.curr_pc + 4;
-            
+
             u8 code = 5;
             csr[static_cast<u8>(Csr::CAUSE)] = ((1u << INTERRUPT_LSB) | code);
-            
+
             u32 flags_value = (f.zf << 0) | (f.sf << 1) | (f.cf << 2) | (f.of << 3);
             csr[static_cast<u8>(Csr::EFLAGS)] = flags_value;
-            
+
             u32 status = csr[static_cast<u8>(Csr::STATUS)];
             u32 ie = (status >> IE_LSB) & 1;
             status &= ~(1u << IE_LSB);
@@ -507,12 +507,11 @@ void CPU::ex_stage() {
             status &= ~(1u << PIE_LSB);
             status |= (ie << PIE_LSB);
             csr[static_cast<u8>(Csr::STATUS)] = status;
-            
+
             u32 ivtbr = csr[static_cast<u8>(Csr::IVTBR)];
             u32 offset = code * 4;
             u32 handler_addr = mem.read_u32(ivtbr + offset);
-            
-            // 점프
+
             interrupt_jump_pending = true;
             interrupt_target = handler_addr;
             
@@ -706,6 +705,11 @@ void CPU::id_stage() {
     next.is_valid = true;
 }
 void CPU::if_stage() {
+    if(interrupt_jump_pending) {
+        pc = interrupt_target;
+        interrupt_jump_pending = false;
+    }
+
     if(need_flush_ifid) {
         return;
     }

@@ -44,6 +44,9 @@ private:
     }
 
     int parseImmediate(const std::string& imm) {
+        if(labels.find(imm) != labels.end()) {
+            return labels[imm];
+        }
         if(imm.find("0x") == 0) {
             return std::stoi(imm, nullptr, 16);
         }
@@ -134,6 +137,8 @@ private:
             if(opcode == "ret") { return RET(); }
             if(opcode == "hlt") { return HLT(); }
             if(opcode == "nop") { return NOP(); }
+            if(opcode == "syscall") { return SYSCALL(); }
+            if(opcode == "iret") { return IRET(); }
             return NOP();
         }
 
@@ -171,8 +176,13 @@ private:
         // CMP
         if(opcode == "cmp") {
             int rs1 = parseRegister(args[0]);
-            int rs2 = parseRegister(args[1]);
-            return CMP(rs1, rs2, Mode::REGISTER);
+            if(args[1][0] == 'r') {
+                int rs2 = parseRegister(args[1]);
+                return CMP(rs1, rs2, Mode::REGISTER);
+            } else {
+                int imm = parseImmediate(args[1]);
+                return CMP(rs1, imm, Mode::IMMEDIATE);
+            }
         }
         
         // MOV
