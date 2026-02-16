@@ -152,6 +152,7 @@ private:
         }
 
         auto args = split(rest, ',');
+        if(opcode == ".word") { return static_cast<inst_t>(parseImmediate(args[0])); }
         
         // ADD, SUB, MUL, DIV, MOD, AND, OR, XOR, SHL, SHR
         if(opcode == "add" || opcode == "sub" || opcode == "mul" || opcode == "div" || 

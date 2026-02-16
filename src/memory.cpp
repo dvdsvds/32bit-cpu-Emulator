@@ -46,12 +46,7 @@ u32 Memory::read_u32(addr_t addr) const {
     }
 }
 
-void Memory::write_u32(addr_t addr, u32 value) {
-    // std::cerr << "[DEBUG] write_u32 addr=0x" << std::hex << addr << " value=" << std::dec << value << std::endl;
-    if(addr == 0x100) {
-        std::cout << "[PRINT] " << static_cast<int32_t>(value) << std::endl;
-        return;
-    }
+void Memory::write_u32_direct(addr_t addr, u32 value) {
     if(addr <= MEMORY_SIZE - 4) {
         data[addr] = (value & 0xFF);
         data[addr + 1] = (value >> 8) & 0xFF;
@@ -60,3 +55,25 @@ void Memory::write_u32(addr_t addr, u32 value) {
     }
 }
 
+void Memory::write_u32(addr_t addr, u32 value) {
+    if(addr == 0x100) {
+        std::cout << "[PRINT:INT] " << static_cast<int32_t>(value) << std::endl;
+        return;
+    }
+    if(addr == 0x104) {
+        std::cout << "[PRINT:BOOL] " << (value ? "true" : "false") << std::endl;
+        return;
+    }
+    if(addr == 0x108) {
+        std::string str;
+        addr_t str_addr = value;
+        char c;
+        while((c = data[str_addr++]) != '\0') {
+            str += c;
+        }
+        std::cout << "[PRINT:STR] " << str << std::endl;
+        return;
+    }
+
+    write_u32_direct(addr, value);
+}

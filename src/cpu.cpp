@@ -832,7 +832,7 @@ Flags CPU::update_flags_shift(u32 result) {
 void CPU::load_program(const inst_t* program, size_t count, addr_t start_addr) {
     addr_t addr = start_addr;
     for(size_t i = 0; i < count; i++) {
-        mem.write_u32(addr, program[i]);
+        mem.write_u32_direct(addr, program[i]);
         addr += 4;
     }
 }
