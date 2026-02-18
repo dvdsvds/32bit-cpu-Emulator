@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <filesystem>
 
 using namespace encoder;
 
@@ -24,7 +25,6 @@ private:
         std::stringstream ss(str);
         std::string token;
         while(std::getline(ss, token, delimiter)) {
-            // trim
             size_t start = token.find_first_not_of(" \t");
             size_t end = token.find_last_not_of(" \t");
             if(start != std::string::npos && end != std::string::npos) {
@@ -96,7 +96,7 @@ private:
             trimmed = trimmed.substr(start, end - start + 1);
             
             if(trimmed.empty()) continue;
-            if(trimmed.back() == ':') continue; // 레이블 스킵
+            if(trimmed.back() == ':') continue;
             
             inst_t inst = parseInstruction(trimmed);
             instructions.push_back(inst);
@@ -154,7 +154,6 @@ private:
         auto args = split(rest, ',');
         if(opcode == ".word") { return static_cast<inst_t>(parseImmediate(args[0])); }
         
-        // ADD, SUB, MUL, DIV, MOD, AND, OR, XOR, SHL, SHR
         if(opcode == "add" || opcode == "sub" || opcode == "mul" || opcode == "div" || 
            opcode == "and" || opcode == "or" || opcode == "xor" ||
            opcode == "shl" || opcode == "shr") {
@@ -174,7 +173,6 @@ private:
             if(opcode == "shr") return SHR(rd, rs1, rs2, Mode::REGISTER);
         }
         
-        // CMP
         if(opcode == "cmp") {
             int rs1 = parseRegister(args[0]);
             if(args[1][0] == 'r') {
@@ -186,7 +184,6 @@ private:
             }
         }
         
-        // MOV
         if(opcode == "mov") {
             int rd = parseRegister(args[0]);
             
@@ -199,14 +196,12 @@ private:
             }
         }
         
-        // JMP
         if(opcode == "jmp") {
             std::string target = args[0];
             int offset = labels[target] - current_address;
             return JMP(offset);
         }
         
-        // BJMP
         if(opcode == "bjmp") {
             std::string cond_str = args[0];
             std::string target = args[1];
@@ -229,7 +224,6 @@ private:
             return CALL(offset);
         }
         
-        // LOADW, STOREW
         if(opcode == "loadw" || opcode == "storew") {
             int rd = parseRegister(args[0]);
             std::string addr = args[1];
@@ -241,7 +235,6 @@ private:
             if(opcode == "storew") return STOREW(rd, rs1, offset);
         }
         
-        // CSRR, CSRW
         if(opcode == "csrr") {
             int rd = parseRegister(args[0]);
             int csr = parseCSR(args[1]);
@@ -302,21 +295,29 @@ public:
 
 int main(int argc, char* argv[]) {
     if(argc < 2) {
-        std::cerr << "Usage: assembler <input.asm>" << std::endl;
+        std::cerr << "Usage: assembler <input.dvs>" << std::endl;
         return 1;
     }
     
+    std::string inputName = argv[1];
+    std::string outputName;
+    size_t dot = inputName.rfind('.');
+    if(dot != std::string::npos) {
+        outputName = inputName.substr(0, dot) + ".bin";
+    } else {
+        outputName = inputName + ".bin";
+    }
+
     Assembler assembler;
     std::vector<inst_t> program = assembler.assemble(argv[1]);
     
     std::cout << "\n=== Generated " << program.size() << " instructions ===" << std::endl;
     
-    // 바이너리 파일로 저장
-    std::ofstream out("program.bin", std::ios::binary);
+    std::ofstream out(outputName, std::ios::binary);
     out.write(reinterpret_cast<const char*>(program.data()), program.size() * sizeof(inst_t));
     out.close();
     
-    std::cout << "Binary saved to: program.bin" << std::endl;
+    std::cout << "Binary saved to: " << outputName << std::endl;
     
     return 0;
 }
