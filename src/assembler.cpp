@@ -224,6 +224,11 @@ private:
             return CALL(offset);
         }
         
+        if(opcode == "callr") {
+            int rs = parseRegister(args[0]);
+            return CALLR(rs);
+        }
+
         if(opcode == "loadw" || opcode == "storew") {
             int rd = parseRegister(args[0]);
             std::string addr = args[1];

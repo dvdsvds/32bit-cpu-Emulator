@@ -306,4 +306,10 @@ namespace encoder {
         inst |= ((rd & 0x1F) << RD_LSB);
         return inst;
     }
+    inst_t CALLR(reg_index rs) {
+        inst_t inst = 0;
+        inst |= (static_cast<uint32_t>(o::CALLR) << OPCODE_LSB);
+        inst |= ((rs & 0x1F) << RD_LSB);
+        return inst;
+    }
 }

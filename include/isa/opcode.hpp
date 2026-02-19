@@ -35,6 +35,7 @@ enum class Opcode : uint8_t {
     CSRWI = 30,
     PUSH = 31,
     POP = 32,
+    CALLR = 33,
     INVALID = 0xFF
 };
 

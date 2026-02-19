@@ -46,4 +46,5 @@ namespace encoder {
 
     inst_t PUSH(reg_index rs);
     inst_t POP(reg_index rd);
+    inst_t CALLR(reg_index rs);
 }

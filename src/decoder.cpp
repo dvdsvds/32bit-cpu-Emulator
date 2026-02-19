@@ -9,7 +9,7 @@ namespace decoder {
     }
     Opcode extract_opcode(inst_t inst) {
         uint8_t opcode = extract_bits(inst, OPCODE_LSB, OPCODE_SIZE);
-        if (opcode <= 32) {
+        if (opcode <= 33) {
             return static_cast<Opcode>(opcode);
         }
         return Opcode::INVALID;
@@ -41,6 +41,7 @@ namespace decoder {
             case Opcode::STOREB:
             case Opcode::PUSH:
             case Opcode::POP:
+            case Opcode::CALLR:
                 return Format::M;
             
             case Opcode::JMP:
@@ -150,7 +151,11 @@ namespace decoder {
                     d.rd = 0;
                 } else if(d.opcode == Opcode::POP) {
                     d.rs1 = 0;
-                } else {
+                } else if(d.opcode == Opcode::CALLR) {
+                    d.rs1 = d.rd;
+                    d.rd = 0;
+                } 
+                else {
                     d.imm16 = extract_imm16(inst);
                 }
                 break;

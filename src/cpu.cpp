@@ -468,7 +468,21 @@ void CPU::ex_stage() {
 
             need_flush_ifid = true;
             need_flush_idex = true;
-            next.is_valid = true;
+            next.is_valid = false;
+            break;
+        }
+        case Opcode::CALLR: {
+            addr_t return_addr = idex.curr_pc + 4;
+            u32 old_sp = csr[static_cast<u8>(Csr::SP)];
+            u32 new_sp = old_sp - 4;
+            mem.write_u32(new_sp, return_addr);
+            csr[static_cast<u8>(Csr::SP)] = new_sp;
+            addr_t target = get_forwarded_value(idex.n_rs1, idex.v_rs1);
+            pc = target;
+
+            need_flush_ifid = true;
+            need_flush_idex = true;
+            next.is_valid = false;
             break;
         }
         case Opcode::RET: {
