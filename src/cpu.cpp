@@ -1,3 +1,6 @@
+#ifdef _WIN32
+    #include <conio.h>
+#endif
 #include "cpu/cpu.hpp"
 #include <iomanip>
 #include <cstring>
@@ -758,6 +761,12 @@ void CPU::if_stage() {
     next.is_valid = true;
 }
 void CPU::step() {
+#ifdef _WIN32
+    if(_kbhit()) {
+        u8 c = static_cast<u8>(_getch());
+        push_key(c);
+    }
+#endif
     update_timer();
     handle_interrupt();
     
@@ -988,4 +997,8 @@ void CPU::set_irq(int irq_num, bool value) {
 bool CPU::get_irq(int irq_num) {
     u32 ipending = csr[static_cast<u8>(Csr::IPENDING)];
     return (ipending >> irq_num) & 1;
+}
+void CPU::push_key(u8 c) {
+    mem.push_key(c); 
+    trigger_interrupt(static_cast<u8>(Interrupt::EXT0));
 }

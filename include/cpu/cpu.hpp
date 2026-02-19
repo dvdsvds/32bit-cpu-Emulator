@@ -93,4 +93,5 @@ class CPU {
         bool is_halted() const { return halted; }
         bool is_paused() const { return paused; }
         
+        void push_key(u8 c);
 };

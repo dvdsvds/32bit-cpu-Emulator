@@ -39,6 +39,17 @@ void Memory::write_u16(addr_t addr, u16 value) {
 }
 
 u32 Memory::read_u32(addr_t addr) const {
+    if(addr == 0x110) {
+        if(!keyboard_buffer.empty()) {
+            u8 c = keyboard_buffer.front();
+            keyboard_buffer.pop();
+            return c;
+        }
+        return 0;
+    }
+    if(addr == 0x114) {
+        return keyboard_buffer.empty() ? 0 : 1;
+    }
     if(addr <= MEMORY_SIZE - 4) {
         return data[addr] | (data[addr + 1] << 8) | (data[addr + 2] << 16) | (data[addr + 3] << 24);
     } else {
@@ -76,4 +87,12 @@ void Memory::write_u32(addr_t addr, u32 value) {
     }
 
     write_u32_direct(addr, value);
+}
+
+void Memory::push_key(u8 c) {
+    keyboard_buffer.push(c);
+}
+
+bool Memory::has_key() const {
+    return !keyboard_buffer.empty();
 }
