@@ -530,6 +530,14 @@ void CPU::ex_stage() {
             u32 offset = code * 4;
             u32 handler_addr = mem.read_u32(ivtbr + offset);
 
+            addr_t sp = csr[static_cast<u8>(Csr::SP)];
+            for(int i = 31; i >= 1; i--) {
+                sp -= 4;
+                mem.write_u32_direct(sp, registers[i]);
+            }
+            csr[static_cast<u8>(Csr::SCRATCH)] = sp;
+            csr[static_cast<u8>(Csr::SP)] = sp;
+
             pc = handler_addr;
             
             next.is_valid = false;
@@ -566,6 +574,13 @@ void CPU::ex_stage() {
             break;
         }
         case Opcode::IRET: {
+            addr_t sp = csr[static_cast<u8>(Csr::SCRATCH)];
+            for(int i = 1; i <= 31; i++) {
+                registers[i] = mem.read_u32_direct(sp);
+                sp += 4;
+            }
+            csr[static_cast<u8>(Csr::SP)] = sp;
+
             u32 epc = csr[static_cast<u8>(Csr::EPC)];
             u32 eflags = csr[static_cast<u8>(Csr::EFLAGS)];
             
@@ -765,9 +780,8 @@ void CPU::step() {
     }
 #endif
     update_timer();
-    handle_interrupt();
-    
     wb_stage();
+    handle_interrupt();
     ex_stage();
     id_stage();
     if_stage();
@@ -928,7 +942,8 @@ void CPU::handle_interrupt() {
         }
     }
 
-    addr_t return_pc = pc;
+    // addr_t return_pc = pc;
+    addr_t return_pc = pipe.getIDEX().is_valid ? pipe.getIDEX().curr_pc : pipe.getIFID().is_valid ? pipe.getIFID().curr_pc : pc;
     csr[static_cast<u8>(Csr::EPC)] = return_pc;
     csr[static_cast<u8>(Csr::CAUSE)] = ((1u << INTERRUPT_LSB) | code);
 
@@ -945,9 +960,18 @@ void CPU::handle_interrupt() {
     u32 offset = code * 4;
     u32 handler_addr = mem.read_u32(ivtbr + offset);
 
+    addr_t sp = csr[static_cast<u8>(Csr::SP)];
+    for(int i = 31; i >= 1; i--) {
+        sp -= 4;
+        mem.write_u32_direct(sp, registers[i]);
+    }
+    csr[static_cast<u8>(Csr::SCRATCH)] = sp;
+    csr[static_cast<u8>(Csr::SP)] = sp;
+
     pc = handler_addr;
-    pipe.flush_ifid();
-    pipe.flush_idex();
+    // need_flush_idex = true;
+    pipe.getIDEX().is_valid = false;
+    pipe.getIFID().is_valid = false;
 
     ipending &= ~(1u << code);
     csr[static_cast<u8>(Csr::IPENDING)] = ipending;
