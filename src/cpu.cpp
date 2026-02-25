@@ -63,6 +63,7 @@ void CPU::wb_stage() {
         }
 
         if(exwb.mem_write) {
+            // std::cerr << "[MEM_WRITE] addr=" << std::hex << exwb.mem_addr << " val=" << exwb.w_data << std::endl;
             if(exwb.mem_u8) {
                 mem.write_u8(exwb.mem_addr, exwb.w_data);
             } else {
@@ -529,8 +530,7 @@ void CPU::ex_stage() {
             u32 offset = code * 4;
             u32 handler_addr = mem.read_u32(ivtbr + offset);
 
-            interrupt_jump_pending = true;
-            interrupt_target = handler_addr;
+            pc = handler_addr;
             
             next.is_valid = false;
             need_flush_ifid = true;
@@ -558,8 +558,7 @@ void CPU::ex_stage() {
             u32 offset = code * 4;
             u32 handler_addr = mem.read_u32(ivtbr + offset);
             
-            interrupt_jump_pending = true;
-            interrupt_target = handler_addr;
+            pc = handler_addr;
             
             next.is_valid = false;
             need_flush_ifid = true;
@@ -722,20 +721,18 @@ void CPU::id_stage() {
     next.is_valid = true;
 }
 void CPU::if_stage() {
-    if(interrupt_jump_pending) {
-        pc = interrupt_target;
-        interrupt_jump_pending = false;
-    }
-
     if(need_flush_ifid) {
         return;
     }
+
     IF_ID& next = pipe.get_next_IFID();
     
     next.curr_pc = pc;
-    inst_t inst = mem.read_u32(pc);
+    inst_t inst = mem.read_u32_direct(pc);
     next.inst = inst;
     
+    // std::cerr << "[IF] pc=0x" << std::hex << pc << " inst=0x" << inst << std::endl;
+
     Mode mode = decoder::extract_mode(inst);
     Opcode opcode = decoder::extract_opcode(inst);
 

@@ -21,6 +21,7 @@ class Memory {
         u32 read_u32(addr_t addr) const;
         void write_u32(addr_t addr, u32 value);
 
+        u32 read_u32_direct(addr_t addr) const;
         void write_u32_direct(addr_t addr, u32 value);
 
         void push_key(u8 c);

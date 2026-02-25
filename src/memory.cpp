@@ -57,6 +57,14 @@ u32 Memory::read_u32(addr_t addr) const {
     }
 }
 
+u32 Memory::read_u32_direct(addr_t addr) const {
+    if(addr <= MEMORY_SIZE - 4) {
+        return data[addr] | (data[addr + 1] << 8) | (data[addr + 2] << 16 | data[addr + 3] << 24);
+    } else {
+        return 0;
+    }
+}
+
 void Memory::write_u32_direct(addr_t addr, u32 value) {
     if(addr <= MEMORY_SIZE - 4) {
         data[addr] = (value & 0xFF);
